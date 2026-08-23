@@ -8,7 +8,7 @@ const manifest = JSON.parse(fs.readFileSync(path.join(root, "manifest.json"), "u
 
 test("manifest identifies Omado as a bar widget", () => {
   assert.equal(manifest.schemaVersion, 1);
-  assert.equal(manifest.id, "maduki-tech.omado");
+  assert.equal(manifest.id, "tamayotchi.omado");
   assert.equal(manifest.name, "Omado");
   assert.deepEqual(manifest.kinds, ["bar-widget"]);
 });

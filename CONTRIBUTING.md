@@ -13,8 +13,8 @@ Thanks for contributing to Omado, a minimal todo-list bar widget for Omarchy.
 Omado runs as an Omarchy Quickshell plugin. Install Omarchy and clone the plugin into its plugin directory:
 
 ```sh
-git clone https://github.com/Maduki-tech/Omado ~/.config/omarchy/plugins/maduki-tech.omado
-omarchy plugin enable maduki-tech.omado
+git clone https://github.com/tamayotchi/Omado ~/.config/omarchy/plugins/tamayotchi.omado
+omarchy plugin enable tamayotchi.omado
 ```
 
 After making changes, reload or restart the Omarchy shell so Quickshell loads updated QML and JavaScript files.
@@ -44,7 +44,7 @@ Before submitting, inspect the Quickshell logs for QML warnings or runtime error
 
 - Follow the existing QML and JavaScript style.
 - Use Omarchy and Quickshell APIs already used by the project instead of adding dependencies.
-- Keep task data local. Do not add accounts, network calls, telemetry, or remote storage without prior discussion.
+- Keep Dropbox integration filesystem-only. Do not add accounts, API calls, or telemetry.
 - Preserve the existing state-file format unless the change includes a migration plan.
 - Keep user-visible behavior keyboard-friendly and accessible.
 - Update `README.md` when installation, requirements, or user-facing behavior changes.

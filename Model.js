@@ -1,4 +1,4 @@
-// Small, local-only helpers for the todo list.
+// Small helpers for the Dropbox-backed todo list.
 function parseTodos(raw) {
     var todos = []
     try {
@@ -17,9 +17,8 @@ function parseTodos(raw) {
     } catch (e) {
         return []
     }
-    // Keep open tasks first while preserving the order within each group.
-    return todos.filter(function (todo) { return !todo.completed })
-        .concat(todos.filter(function (todo) { return todo.completed }))
+    // Preserve the saved order exactly; users arrange tasks by dragging them.
+    return todos
 }
 
 if (typeof module !== "undefined") {

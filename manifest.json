@@ -1,10 +1,10 @@
 {
     "schemaVersion": 1,
-    "id": "maduki-tech.omado",
+    "id": "tamayotchi.omado",
     "name": "Omado",
-    "version": "1.1.0",
-    "author": "maduki-tech",
-    "description": "A minimal local todo list for your Omarchy bar",
+    "version": "1.2.0",
+    "author": "tamayotchi",
+    "description": "A draggable todo list for your Omarchy bar with Dropbox sync",
     "kinds": [
         "bar-widget"
     ],
@@ -13,7 +13,7 @@
     },
     "barWidget": {
         "displayName": "Omado",
-        "description": "A minimal local todo list for your Omarchy bar",
+        "description": "A draggable todo list for your Omarchy bar with Dropbox sync",
         "category": "Productivity",
         "allowMultiple": false
     }

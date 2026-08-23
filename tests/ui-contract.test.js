@@ -12,7 +12,7 @@ function includes(source, fragment) {
 }
 
 test("panel keeps required plugin wiring", () => {
-  includes(panel, 'moduleName: "maduki-tech.omado"');
+  includes(panel, 'moduleName: "tamayotchi.omado"');
   includes(panel, "readonly property string label:");
   includes(panel, 'property var anchorItem: null');
   includes(panel, 'property var hostWidget: null');
@@ -36,6 +36,7 @@ test("panel exposes core todo interactions", () => {
     "toggleTodo",
     "removeTodo",
     "clearCompleted",
+    "moveTodo",
     "startEdit",
     "commitEdit",
     "cancelEdit"
@@ -44,11 +45,18 @@ test("panel exposes core todo interactions", () => {
   }
 
   includes(panel, "onClicked: root.addTodo()");
-  includes(panel, "onClicked: root.removeTodo(index)");
-  includes(panel, "root.toggleTodo(index)");
-  includes(panel, "root.startEdit(index)");
-  includes(panel, 'todoModel.move(index, completed ? todoModel.count - 1 : 0, 1)');
+  includes(panel, "onClicked: root.removeTodo(todoDelegate.index)");
+  includes(panel, "root.toggleTodo(todoDelegate.index)");
+  includes(panel, "root.startEdit(todoDelegate.index)");
+  includes(panel, "todoModel.move(fromIndex, toIndex, 1)");
+  includes(panel, "DropArea");
+  includes(panel, 'keys: ["omado-todo"]');
+  includes(panel, "Drag.active: rowArea.drag.active");
+  includes(panel, "drag.target: (pressedButtons & Qt.LeftButton) ? todoRow : null");
+  includes(panel, "root.moveTodo(drop.source.index, todoDelegate.index)");
   includes(panel, 'text: "Clear completed"');
+  assert.equal(panel.includes("A → Z"), false);
+  assert.equal(panel.includes("Z → A"), false);
 });
 
 test("panel handles required keyboard actions", () => {
@@ -64,7 +72,7 @@ test("panel handles required keyboard actions", () => {
 test("panel exposes the global Quick Add overlay", () => {
   includes(panel, "import Quickshell.Hyprland");
   includes(panel, "GlobalShortcut");
-  includes(panel, 'appid: "maduki-tech.omado"');
+  includes(panel, 'appid: "tamayotchi.omado"');
   includes(panel, 'name: "quick-add"');
   includes(panel, "function openQuickAdd()");
   includes(panel, "function closeQuickAdd()");
@@ -73,9 +81,16 @@ test("panel exposes the global Quick Add overlay", () => {
   includes(panel, "root.close();");
   includes(panel, "WlrLayer.Overlay");
   includes(panel, "WlrKeyboardFocus.Exclusive");
-  includes(panel, 'WlrLayershell.namespace: "maduki-tech-omado-quick-add"');
+  includes(panel, 'WlrLayershell.namespace: "tamayotchi-omado-quick-add"');
   includes(panel, 'text: "QUICK ADD"');
   includes(panel, "root.addTodoTitle(text)");
+});
+
+test("panel stores todos directly in Dropbox", () => {
+  includes(panel, 'readonly property string todoPath: Quickshell.env("HOME") + "/Dropbox/TODO.json"');
+  assert.equal(panel.includes("stateDir"), false);
+  assert.equal(panel.includes("dropboxReady"), false);
+  assert.equal(panel.includes("storageReady"), false);
 });
 
 test("panel renders empty and remaining-task states", () => {

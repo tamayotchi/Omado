@@ -4,7 +4,7 @@ import qs.Ui
 
 BarWidget {
     id: root
-    moduleName: "maduki-tech.omado"
+    moduleName: "tamayotchi.omado"
 
     function injectPanel() {
         var target = panelLoader.item;

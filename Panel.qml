@@ -9,7 +9,7 @@ import "Model.js" as Model
 
 Panel {
     id: root
-    moduleName: "maduki-tech.omado"
+    moduleName: "tamayotchi.omado"
 
     property var anchorItem: null
     property var hostWidget: null
@@ -23,8 +23,7 @@ Panel {
     property var activeEditor: null
     property bool quickAddOpen: false
 
-    readonly property string stateDir: Quickshell.env("HOME") + "/.local/state/omarchy/settings"
-    readonly property string todoPath: stateDir + "/maduki-tech.todo.json"
+    readonly property string todoPath: Quickshell.env("HOME") + "/Dropbox/TODO.json"
 
     ListModel {
         id: todoModel
@@ -182,10 +181,18 @@ Panel {
             return;
         var completed = !todoModel.get(index).completed;
         todoModel.setProperty(index, "completed", completed);
-        // Keep the two states separated without changing order within either group.
-        todoModel.move(index, completed ? todoModel.count - 1 : 0, 1);
         saveTodos();
         recount();
+    }
+
+    function moveTodo(fromIndex, toIndex) {
+        root.cancelEdit();
+        if (fromIndex < 0 || fromIndex >= todoModel.count
+                || toIndex < 0 || toIndex >= todoModel.count
+                || fromIndex === toIndex)
+            return;
+        todoModel.move(fromIndex, toIndex, 1);
+        saveTodos();
     }
 
     function removeTodo(index) {
@@ -223,18 +230,8 @@ Panel {
         onFileChanged: reload()
     }
 
-    Process {
-        id: ensureDirsProc
-        command: ["mkdir", "-p", root.stateDir]
-        onExited: todoFile.reload()
-    }
-
-    Component.onCompleted: {
-        ensureDirsProc.running = true;
-    }
-
     GlobalShortcut {
-        appid: "maduki-tech.omado"
+        appid: "tamayotchi.omado"
         name: "quick-add"
         onPressed: root.openQuickAdd()
     }
@@ -374,8 +371,8 @@ Panel {
                         model: todoModel
                         spacing: Style.space(4)
 
-                        delegate: Rectangle {
-                            id: todoRow
+                        delegate: Item {
+                            id: todoDelegate
                             required property int index
                             required property string title
                             required property bool completed
@@ -385,129 +382,170 @@ Panel {
                             width: todoList.width - Style.space(32)
                             x: Style.space(16)
                             height: Style.space(46)
-                            radius: Style.cornerRadius
-                            color: rowArea.containsMouse ? Style.hoverFillFor(root.bar.foreground, Color.accent) : "transparent"
+                            z: todoRow.Drag.active ? 100 : 0
 
-                            Row {
+                            DropArea {
                                 anchors.fill: parent
-                                anchors.leftMargin: Style.space(12)
-                                anchors.rightMargin: Style.space(8)
-                                spacing: Style.space(10)
+                                keys: ["omado-todo"]
 
-                                Text {
-                                    text: completed ? "󰄲" : "󰄱"
-                                    color: completed ? Color.accent : root.bar.foreground
-                                    font.family: root.bar.fontFamily
-                                    font.pixelSize: Style.font.title
-                                    anchors.verticalCenter: parent.verticalCenter
+                                onDropped: function (drop) {
+                                    if (!drop.source || drop.source === todoDelegate)
+                                        return;
+                                    root.moveTodo(drop.source.index, todoDelegate.index);
+                                    drop.accept(Qt.MoveAction);
                                 }
-
-                                Text {
-                                    visible: !todoRow.editing
-                                    id: titleText
-                                    width: parent.width - Style.space(72)
-                                    text: title
-                                    color: completed ? Qt.darker(root.bar.foreground, 1.6) : root.bar.foreground
-                                    font.family: root.bar.fontFamily
-                                    font.pixelSize: Style.font.body
-                                    font.strikeout: completed
-                                    elide: Text.ElideRight
-                                    anchors.verticalCenter: parent.verticalCenter
-
-                                    PanelToolTip {
-                                        visible: rowArea.containsMouse && titleText.truncated
-                                        text: title
-                                        fontFamily: root.bar.fontFamily
-                                    }
-                                }
-
-                                TextField {
-                                    id: editField
-                                    visible: todoRow.editing
-                                    width: parent.width - Style.space(72)
-                                    foreground: root.bar.foreground
-                                    font.family: root.bar.fontFamily
-                                    verticalPadding: Style.space(2)
-                                    anchors.verticalCenter: parent.verticalCenter
-
-                                    function beginEdit() {
-                                        root.activeEditor = editField;
-                                        text = todoRow.title;
-                                        forceActiveFocus();
-                                        selectAll();
-                                    }
-
-                                    // A save rebuilds the model, so a delegate can be
-                                    // created with editing already true, in which case
-                                    // onVisibleChanged never fires.
-                                    Component.onCompleted: if (visible)
-                                        Qt.callLater(beginEdit)
-                                    onVisibleChanged: if (visible)
-                                        beginEdit()
-
-                                    // Clicking away keeps the edit rather than dropping
-                                    // it. commitEdit() clears editingIndex first, so
-                                    // this cannot recurse.
-                                    onActiveFocusChanged: {
-                                        if (!activeFocus && todoRow.editing)
-                                            root.commitEdit(todoRow.index, editField.text);
-                                    }
-
-                                    Keys.onPressed: function (event) {
-                                        if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
-                                            root.commitEdit(todoRow.index, editField.text);
-                                            event.accepted = true;
-                                        } else if (event.key === Qt.Key_Escape) {
-                                            root.cancelEdit();
-                                            event.accepted = true;
-                                        } else if (event.key === Qt.Key_Tab || event.key === Qt.Key_Backtab) {
-                                            event.accepted = true;
-                                        }
-                                    }
-                                }
-
                             }
 
                             Rectangle {
-                                id: trashButton
-                                width: Style.space(32)
-                                height: Style.space(32)
-                                x: parent.width - width - Style.space(8)
-                                y: (parent.height - height) / 2
-                                z: 10
+                                id: todoRow
+                                width: parent.width
+                                height: parent.height
+                                anchors.centerIn: rowArea.drag.active ? undefined : parent
                                 radius: Style.cornerRadius
-                                color: trashArea.containsMouse ? Style.hoverFillFor(root.bar.foreground, Color.accent) : "transparent"
+                                color: rowArea.containsMouse ? Style.hoverFillFor(root.bar.foreground, Color.accent) : "transparent"
 
-                                Text {
-                                    anchors.centerIn: parent
-                                    text: "󰆴"
-                                    color: trashArea.containsMouse ? Color.accent : Qt.darker(root.bar.foreground, 1.4)
-                                    font.family: root.bar.fontFamily
-                                    font.pixelSize: Style.font.body
+                                Drag.active: rowArea.drag.active
+                                Drag.source: todoDelegate
+                                Drag.hotSpot.x: width / 2
+                                Drag.hotSpot.y: height / 2
+                                Drag.keys: ["omado-todo"]
+                                Drag.supportedActions: Qt.MoveAction
+
+                                Row {
+                                    anchors.fill: parent
+                                    anchors.leftMargin: Style.space(12)
+                                    anchors.rightMargin: Style.space(8)
+                                    spacing: Style.space(10)
+
+                                    Text {
+                                        text: todoDelegate.completed ? "󰄲" : "󰄱"
+                                        color: todoDelegate.completed ? Color.accent : root.bar.foreground
+                                        font.family: root.bar.fontFamily
+                                        font.pixelSize: Style.font.title
+                                        anchors.verticalCenter: parent.verticalCenter
+                                    }
+
+                                    Text {
+                                        visible: !todoDelegate.editing
+                                        id: titleText
+                                        width: parent.width - Style.space(72)
+                                        text: todoDelegate.title
+                                        color: todoDelegate.completed ? Qt.darker(root.bar.foreground, 1.6) : root.bar.foreground
+                                        font.family: root.bar.fontFamily
+                                        font.pixelSize: Style.font.body
+                                        font.strikeout: todoDelegate.completed
+                                        elide: Text.ElideRight
+                                        anchors.verticalCenter: parent.verticalCenter
+
+                                        PanelToolTip {
+                                            visible: rowArea.containsMouse && titleText.truncated
+                                            text: todoDelegate.title
+                                            fontFamily: root.bar.fontFamily
+                                        }
+                                    }
+
+                                    TextField {
+                                        id: editField
+                                        visible: todoDelegate.editing
+                                        width: parent.width - Style.space(72)
+                                        foreground: root.bar.foreground
+                                        font.family: root.bar.fontFamily
+                                        verticalPadding: Style.space(2)
+                                        anchors.verticalCenter: parent.verticalCenter
+
+                                        function beginEdit() {
+                                            root.activeEditor = editField;
+                                            text = todoDelegate.title;
+                                            forceActiveFocus();
+                                            selectAll();
+                                        }
+
+                                        // A save rebuilds the model, so a delegate can be
+                                        // created with editing already true, in which case
+                                        // onVisibleChanged never fires.
+                                        Component.onCompleted: if (visible)
+                                            Qt.callLater(beginEdit)
+                                        onVisibleChanged: if (visible)
+                                            beginEdit()
+
+                                        // Clicking away keeps the edit rather than dropping
+                                        // it. commitEdit() clears editingIndex first, so
+                                        // this cannot recurse.
+                                        onActiveFocusChanged: {
+                                            if (!activeFocus && todoDelegate.editing)
+                                                root.commitEdit(todoDelegate.index, editField.text);
+                                        }
+
+                                        Keys.onPressed: function (event) {
+                                            if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
+                                                root.commitEdit(todoDelegate.index, editField.text);
+                                                event.accepted = true;
+                                            } else if (event.key === Qt.Key_Escape) {
+                                                root.cancelEdit();
+                                                event.accepted = true;
+                                            } else if (event.key === Qt.Key_Tab || event.key === Qt.Key_Backtab) {
+                                                event.accepted = true;
+                                            }
+                                        }
+                                    }
+
+                                }
+
+                                Rectangle {
+                                    id: trashButton
+                                    width: Style.space(32)
+                                    height: Style.space(32)
+                                    x: parent.width - width - Style.space(8)
+                                    y: (parent.height - height) / 2
+                                    z: 10
+                                    radius: Style.cornerRadius
+                                    color: trashArea.containsMouse ? Style.hoverFillFor(root.bar.foreground, Color.accent) : "transparent"
+
+                                    Text {
+                                        anchors.centerIn: parent
+                                        text: "󰆴"
+                                        color: trashArea.containsMouse ? Color.accent : Qt.darker(root.bar.foreground, 1.4)
+                                        font.family: root.bar.fontFamily
+                                        font.pixelSize: Style.font.body
+                                    }
+
+                                    MouseArea {
+                                        id: trashArea
+                                        anchors.fill: parent
+                                        hoverEnabled: true
+                                        cursorShape: Qt.PointingHandCursor
+                                        onClicked: root.removeTodo(todoDelegate.index)
+                                    }
                                 }
 
                                 MouseArea {
-                                    id: trashArea
-                                    anchors.fill: parent
-                                    hoverEnabled: true
-                                    cursorShape: Qt.PointingHandCursor
-                                    onClicked: root.removeTodo(index)
-                                }
-                            }
+                                    id: rowArea
+                                    property bool wasDragged: false
 
-                            MouseArea {
-                                id: rowArea
-                                anchors.fill: parent
-                                anchors.rightMargin: Style.space(48)
-                                z: -1
-                                hoverEnabled: true
-                                acceptedButtons: Qt.LeftButton | Qt.RightButton
-                                cursorShape: Qt.PointingHandCursor
-                                onClicked: function (mouse) {
-                                    if (mouse.button === Qt.RightButton)
-                                        root.startEdit(index);
-                                    else
-                                        root.toggleTodo(index);
+                                    anchors.fill: parent
+                                    anchors.rightMargin: Style.space(48)
+                                    z: -1
+                                    hoverEnabled: true
+                                    acceptedButtons: Qt.LeftButton | Qt.RightButton
+                                    cursorShape: Qt.PointingHandCursor
+                                    preventStealing: true
+                                    drag.target: (pressedButtons & Qt.LeftButton) ? todoRow : null
+                                    drag.axis: Drag.YAxis
+
+                                    onPressed: wasDragged = false
+                                    onPositionChanged: if (drag.active)
+                                        wasDragged = true
+                                    onReleased: if (todoRow.Drag.active)
+                                        todoRow.Drag.drop()
+
+                                    onClicked: function (mouse) {
+                                        if (wasDragged)
+                                            return;
+                                        if (mouse.button === Qt.RightButton)
+                                            root.startEdit(todoDelegate.index);
+                                        else
+                                            root.toggleTodo(todoDelegate.index);
+                                    }
                                 }
                             }
                         }
@@ -559,7 +597,7 @@ Panel {
         exclusionMode: ExclusionMode.Ignore
         WlrLayershell.layer: WlrLayer.Overlay
         WlrLayershell.keyboardFocus: WlrKeyboardFocus.Exclusive
-        WlrLayershell.namespace: "maduki-tech-omado-quick-add"
+        WlrLayershell.namespace: "tamayotchi-omado-quick-add"
         anchors {
             top: true
             bottom: true
