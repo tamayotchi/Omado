@@ -23,7 +23,7 @@ Panel {
     property var activeEditor: null
     property bool quickAddOpen: false
 
-    readonly property string todoPath: Quickshell.env("HOME") + "/Dropbox/TODO.json"
+    readonly property string todoPath: Quickshell.env("HOME") + "/Dropbox/PERSONAL/TODO.json"
 
     ListModel {
         id: todoModel
