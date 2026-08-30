@@ -87,7 +87,7 @@ test("panel exposes the global Quick Add overlay", () => {
 });
 
 test("panel stores todos directly in Dropbox", () => {
-  includes(panel, 'readonly property string todoPath: Quickshell.env("HOME") + "/Dropbox/PERSONAL/TODO.json"');
+  includes(panel, 'readonly property string todoPath: Quickshell.env("HOME") + "/Dropbox/Apps/Omado/TODO.json"');
   assert.equal(panel.includes("stateDir"), false);
   assert.equal(panel.includes("dropboxReady"), false);
   assert.equal(panel.includes("storageReady"), false);
